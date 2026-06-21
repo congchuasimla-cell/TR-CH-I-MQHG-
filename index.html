@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trò Chơi Khởi Động: Mảnh Ghép Gia Đình</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #fcf8f2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #4a3728;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        p.subtitle {
+            color: #7a6855;
+            margin-bottom: 25px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        /* Khung chứa game */
+        .game-container {
+            position: relative;
+            width: 800px;
+            height: 450px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            background-color: #ddd;
+        }
+
+        /* Ảnh gia đình ẩn bên dưới */
+        .background-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Lưới 4 mảnh ghép phía trên */
+        .puzzle-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            z-index: 2;
+        }
+
+        /* Phong cách từng mảnh ghép */
+        .puzzle-piece {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.5s ease;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .puzzle-piece:hover {
+            filter: brightness(1.1);
+            transform: scale(0.98);
+        }
+
+        /* Màu sắc 4 mảnh ghép */
+        .piece-1 { background-color: #2ecc71; } /* Xanh lá */
+        .piece-2 { background-color: #f1c40f; } /* Vàng */
+        .piece-3 { background-color: #3498db; } /* Xanh dương */
+        .piece-4 { background-color: #e74c3c; } /* Đỏ */
+
+        /* Trạng thái mảnh ghép biến mất khi trả lời đúng */
+        .puzzle-piece.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.8);
+        }
+
+        /* Hộp thoại Popup câu hỏi trắc nghiệm */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .modal.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: white;
+            width: 600px;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: left;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+
+        .modal.open .modal-content {
+            transform: translateY(0);
+        }
+
+        .question-title {
+            font-size: 16px;
+            color: #e67e22;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .question-text {
+            font-size: 18px;
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        /* Danh sách phương án trắc nghiệm */
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background-color: #f8f9fa;
+            border: 2px solid #e2e8f0;
+            padding: 14px 20px;
+            border-radius: 8px;
+            text-align: left;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #4a5568;
+        }
+
+        .option-btn:hover {
+            background-color: #edf2f7;
+            border-color: #cbd5e0;
+        }
+
+        /* Trạng thái Đúng / Sai khi click */
+        .option-btn.correct {
+            background-color: #d4edda !important;
+            border-color: #c3e6cb !important;
+            color: #155724 !important;
+            font-weight: bold;
+        }
+
+        .option-btn.wrong {
+            background-color: #f8d7da !important;
+            border-color: #f5c6cb !important;
+            color: #721c24 !important;
+        }
+
+        /* Nút Đóng / Tiếp tục */
+        .close-btn {
+            margin-top: 20px;
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            float: right;
+            display: none;
+            font-weight: 600;
+        }
+
+        .close-btn:hover {
+            background-color: #1a252f;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎮 Khởi Động: Mảnh Ghép Gia Đình</h1>
+    <p class="subtitle">Click vào từng mảnh ghép màu sắc, trả lời đúng câu hỏi trắc nghiệm để lật mở bức tranh ẩn giấu!</p>
+
+    <!-- Khung chứa Game -->
+    <div class="game-container">
+        <!-- Ảnh nền gia đình 4 người (Bố mẹ & 2 con lớn) -->
+        <img class="background-image" src="https://images.unsplash.com/photo-1542456316-1091518271?auto=format&fit=crop&w=1200&q=80" alt="Gia đình hạnh phúc">
+        
+        <!-- 4 Mảnh ghép che phủ bên trên -->
+        <div class="puzzle-grid">
+            <div class="puzzle-piece piece-1" onclick="openQuestion(1)">1</div>
+            <div class="puzzle-piece piece-2" onclick="openQuestion(2)">2</div>
+            <div class="puzzle-piece piece-3" onclick="openQuestion(3)">3</div>
+            <div class="puzzle-piece piece-4" onclick="openQuestion(4)">4</div>
+        </div>
+    </div>
+
+    <!-- Hộp thoại Câu hỏi hiển thị dạng Popup -->
+    <div class="modal" id="questionModal">
+        <div class="modal-content">
+            <div class="question-title" id="modalTitle">Mảnh ghép</div>
+            <div class="question-text" id="modalQuestion">Nội dung câu hỏi?</div>
+            <div class="options-list" id="modalOptions">
+                <!-- Các nút phương án trắc nghiệm tự động sinh bằng JS -->
+            </div>
+            <button class="close-btn" id="closeBtn" onclick="closeQuestion()">Lật mở mảnh ghép 🔓</button>
+            <div style="clear: both;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Dữ liệu bộ 4 câu hỏi trắc nghiệm từ nội dung bài giảng của bạn
+        const quizData = {
+            1: {
+                title: "Mảnh Ghép 1: Thói Quen Gắn Kết",
+                question: "Đâu là 'khung giờ vàng' và hoạt động thiết thực nhất giúp tạo dựng 'Thời gian chất lượng' nhằm gắn kết các thành viên trong gia đình?",
+                options: [
+                    { text: "A. Khung giờ ăn tối và cùng dọn dẹp, nơi cả nhà quây quần trò chuyện về một ngày đã qua.", correct: true },
+                    { text: "B. Sau 10 giờ đêm khi ai về phòng nấy và nhắn tin qua nhóm chat gia đình.", correct: false },
+                    { text: "C. Ngày cuối tuần khi bố mẹ làm việc tại cơ quan và con cái đi học thêm.", correct: false },
+                    { text: "D. Cả nhà cùng ngồi xem tivi nhưng mỗi người tập trung sử dụng một điện thoại riêng.", correct: false }
+                ]
+            },
+            2: {
+                title: "Mảnh Ghép 2: Góc Nhìn Thấu Hiểu",
+                question: "Khi đối mặt với việc bố mẹ hay 'cằn nhằn', nghiêm khắc hoặc tạo 'Áp lực' trong cuộc sống, một học sinh có tinh thần lành mạnh nên nhận diện điều này như thế nào?",
+                options: [
+                    { text: "A. Xem đó là sự áp đặt hoàn toàn và lựa chọn im lặng, tỏ thái độ xa cách thế hệ.", correct: false },
+                    { text: "B. Hiểu rằng đằng sau sự nghiêm khắc là lo lắng, yêu thương; cần chủ động lắng nghe và chia sẻ góc nhìn bản thân.", correct: true },
+                    { text: "C. Phản kháng ngay lập tức để chứng tỏ bản thân đã lớn và có quyền tự quyết.", correct: false },
+                    { text: "D. Bỏ qua lời nói của bố mẹ và tìm kiếm sự thấu hiểu hoàn toàn từ người lạ bên ngoài.", correct: false }
+                ]
+            },
+            3: {
+                title: "Mảnh Ghép 3: Hành Động Yêu Thương",
+                question: "Hành động nào thể hiện kỹ năng 'Bày tỏ tình cảm' chủ động, giúp xóa nhòa khoảng cách và vun đắp mối quan hệ gia đình hạnh phúc?",
+                options: [
+                    { text: "A. Chỉ nhắn tin chúc mừng hoặc nói lời cảm ơn khi cần xin tiền chi tiêu hoặc xin đi chơi.", correct: false },
+                    { text: "B. Giữ tình cảm trong lòng, không cần nói ra hay hành động vì 'người nhà thì tự hiểu nhau'.", correct: false },
+                    { text: "C. Chủ động trao cái ôm, giúp đỡ việc nhà hoặc gửi những lời chúc, lời xin lỗi chân thành đúng lúc.", correct: true },
+                    { text: "D. Mua những món quà đắt tiền tặng bố mẹ thay cho việc dành thời gian ở bên cạnh trò chuyện.", correct: false }
+                ]
+            },
+            4: {
+                title: "Mảnh Ghép 4: Khoảng Cách Thế Hệ",
+                question: "Đâu là 'Nguyên nhân tiêu cực' cốt lõi dẫn đến tình trạng rạn nứt, tổn thương tâm lý và mất kết nối giữa bố mẹ và con cái lứa tuổi cấp 3?",
+                options: [
+                    { text: "A. Sự khác biệt về sở thích ăn uống và gu thời trang hằng ngày.", correct: false },
+                    { text: "B. Việc con cái dành quá nhiều thời gian cho các hoạt động ngoại khóa ở trường.", correct: false },
+                    { text: "C. Khoảng cách thế hệ, áp lực kỳ vọng quá lớn và sự thiếu hụt giao tiếp, lắng nghe sâu giữa các thành viên.", correct: true },
+                    { text: "D. Việc bố mẹ quản lý chi tiêu cá nhân của con quá chặt chẽ.", correct: false }
+                ]
+            }
+        };
+
+        let currentPieceIndex = null;
+
+        // Hàm mở Popup câu hỏi
+        function openQuestion(pieceNum) {
+            currentPieceIndex = pieceNum;
+            const data = quizData[pieceNum];
+            
+            document.getElementById('modalTitle').innerText = data.title;
+            document.getElementById('modalQuestion').innerText = data.question;
+            
+            const optionsContainer = document.getElementById('modalOptions');
+            optionsContainer.innerHTML = ''; // Xóa phương án cũ
+            
+            document.getElementById('closeBtn').style.display = 'none'; // Ẩn nút đóng khi chưa trả lời xong
+
+            // Tạo các nút bấm phương án
+            data.options.forEach((opt, index) => {
+                const button = document.createElement('button');
+                button.className = 'option-btn';
+                button.innerText = opt.text;
+                button.onclick = function() { checkAnswer(this, opt.correct); };
+                optionsContainer.appendChild(button);
+            });
+
+            document.getElementById('questionModal').classList.add('open');
+        }
+
+        // Hàm kiểm tra đáp án Đúng / Sai
+        function checkAnswer(selectedButton, isCorrect) {
+            const allButtons = document.querySelectorAll('.option-btn');
+            
+            // Vô hiệu hóa tất cả các nút sau khi đã chọn
+            allButtons.forEach(btn => btn.style.pointerEvents = 'none');
+
+            if (isCorrect) {
+                selectedButton.classList.add('correct');
+                // Hiển thị nút để chuẩn bị lật mảnh ghép
+                document.getElementById('closeBtn').style.display = 'block';
+            } else {
+                selectedButton.classList.add('wrong');
+                // Nếu trả lời sai, cho phép bấm thử lại sau 1 giây
+                setTimeout(() => {
+                    allButtons.forEach(btn => {
+                        if(!btn.classList.contains('correct')) btn.style.pointerEvents = 'auto';
+                    });
+                    selectedButton.classList.remove('wrong');
+                }, 1200);
+            }
+        }
+
+        // Hàm đóng Popup và ẩn mảnh ghép tương ứng
+        function closeQuestion() {
+            document.getElementById('questionModal').classList.remove('open');
+            
+            if (currentPieceIndex !== null) {
+                // Thêm class 'hidden' để mảnh ghép mờ dần và biến mất
+                const pieces = document.querySelectorAll('.puzzle-piece');
+                pieces[currentPieceIndex - 1].classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
